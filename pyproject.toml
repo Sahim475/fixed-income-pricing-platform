@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fixed-income-pricing-platform"
+version = "0.1.0"
+description = "A Python-based fixed income analytics platform for pricing, risk analysis, and yield-curve scenarios"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "numpy",
+  "pandas",
+  "pandas_datareader",
+  "plotly",
+  "scipy",
+  "streamlit",
+  "pytest",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [".venv", "tmp", ".git", "__pycache__", ".pytest_cache"]

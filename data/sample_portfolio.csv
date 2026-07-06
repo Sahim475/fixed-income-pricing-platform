@@ -1,0 +1,4 @@
+name,face_value,coupon_rate,maturity_years,frequency,yield_rate,accrued_fraction,market_value
+5Y Government Bond,100,0.05,5,1,0.04,0.25,250000
+10Y Corporate Bond,100,0.06,10,2,0.055,0.40,400000
+2Y Short Bond,100,0.035,2,2,0.038,0.10,150000
