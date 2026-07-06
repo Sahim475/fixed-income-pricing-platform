@@ -271,15 +271,4 @@ Planned extensions include:
 - Historical scenario analysis
 - Market data integration
 
-## Learning Outcomes
 
-This project demonstrates a combination of software engineering and quantitative finance skills:
-
-- Object-oriented and modular Python design
-- Data handling with Pandas and CSV-based pipelines
-- Numerical methods for bond pricing and risk analytics
-- Risk metric implementation for duration, convexity, and DV01
-- Interactive analytics and dashboard development with Streamlit and Plotly
-- Test-driven development and reproducible financial analysis workflows
-
-This repository is suitable as a public GitHub project and as a junior quant developer portfolio piece that bridges core finance concepts with practical software implementation.
