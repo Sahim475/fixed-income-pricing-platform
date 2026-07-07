@@ -28,8 +28,10 @@ from fixed_income.pricing import clean_price, dirty_price
 from fixed_income.reporting import generate_text_risk_report
 from fixed_income.risk import convexity, dv01, modified_duration
 from fixed_income.analytics import (
+    VOLATILITY_PRESETS_BPS,
     calculate_historical_curve_shocks,
     curve_fit_metrics,
+    default_tenor_volatility_assumptions,
     fetch_fred_treasury_curve,
     fit_nelson_siegel,
     fit_svensson,
@@ -37,11 +39,14 @@ from fixed_income.analytics import (
     historical_curves_for_var,
     latest_curve_change_from_market_data,
     latest_curve_from_market_data,
+    load_market_data_from_csv,
+    monte_carlo_risk_summary,
     portfolio_risk_summary,
     run_stress_tests,
     save_market_data_to_csv,
+    simulate_portfolio_monte_carlo,
     simulate_portfolio_pnl_from_curve_shocks,
-    load_market_data_from_csv,
+    simulate_yield_curve_shocks,
     yield_curve_from_market_data,
 )
 from fixed_income.market_data import generate_sample_market_data
@@ -56,6 +61,11 @@ from fixed_income.visualisation import (
     market_curve_change_data,
     market_rate_curve_data,
     market_tenor_history_data,
+    monte_carlo_cdf_chart_data,
+    monte_carlo_distribution_chart_data,
+    monte_carlo_shock_chart_data,
+    monte_carlo_var_chart_data,
+    monte_carlo_worst_scenarios_chart_data,
     nelson_siegel_curve_data,
     non_parallel_curve_scenario_data,
     pnl_distribution_data,
@@ -294,6 +304,22 @@ def build_plotly_histogram(df: pd.DataFrame, x_col: str, title: str) -> go.Figur
     return fig
 
 
+def build_plotly_box(df: pd.DataFrame, x_col: str, y_col: str, title: str) -> go.Figure:
+    """Build a standardised box plot for distribution comparisons."""
+    fig = px.box(
+        df,
+        x=x_col,
+        y=y_col,
+        template="plotly_white",
+        color_discrete_sequence=["#4C78A8"],
+        title=title,
+    )
+    fig.update_layout(margin=dict(l=20, r=20, t=50, b=20), height=320)
+    fig.update_xaxes(title=x_col.replace("_", " ").title())
+    fig.update_yaxes(title=y_col.replace("_", " ").title())
+    return fig
+
+
 def build_var_threshold_chart(df: pd.DataFrame, title: str) -> go.Figure:
     """Build a sorted P&L chart with VaR and Expected Shortfall thresholds."""
     fig = go.Figure()
@@ -388,6 +414,14 @@ def main() -> None:
         st.session_state["use_market_data_history_for_var"] = False
     if "market_data_selected_tenor" not in st.session_state:
         st.session_state["market_data_selected_tenor"] = 10.0
+    if "mc_n_simulations" not in st.session_state:
+        st.session_state["mc_n_simulations"] = 1000
+    if "mc_random_seed" not in st.session_state:
+        st.session_state["mc_random_seed"] = 42
+    if "mc_confidence_level" not in st.session_state:
+        st.session_state["mc_confidence_level"] = 0.95
+    if "mc_volatility_preset" not in st.session_state:
+        st.session_state["mc_volatility_preset"] = "Normal volatility"
 
     st.title("Fixed Income Pricing & Analytics Simulator")
     st.caption("A streamlined view of portfolio pricing, sensitivity, and curve analytics for presentation use.")
@@ -592,6 +626,37 @@ def main() -> None:
     )
     market_risk_metrics_df = risk_metrics_table_data(market_risk_summary)
     stress_chart_df = stress_scenario_pnl_data(stress_test_df)
+    monte_carlo_simulation_tenors = list(market_risk_base_curve.tenors)
+    monte_carlo_volatility_assumptions = default_tenor_volatility_assumptions(
+        monte_carlo_simulation_tenors,
+        preset_name=st.session_state["mc_volatility_preset"],
+    )
+    monte_carlo_shocks_df = simulate_yield_curve_shocks(
+        monte_carlo_simulation_tenors,
+        monte_carlo_volatility_assumptions,
+        n_simulations=int(st.session_state["mc_n_simulations"]),
+        random_seed=int(st.session_state["mc_random_seed"]),
+    )
+    monte_carlo_results_df = simulate_portfolio_monte_carlo(
+        holdings,
+        market_risk_base_curve,
+        tenors=monte_carlo_simulation_tenors,
+        volatilities_bps=monte_carlo_volatility_assumptions,
+        n_simulations=int(st.session_state["mc_n_simulations"]),
+        random_seed=int(st.session_state["mc_random_seed"]),
+    )
+    monte_carlo_summary = monte_carlo_risk_summary(monte_carlo_results_df)
+    monte_carlo_distribution_df = monte_carlo_distribution_chart_data(monte_carlo_results_df)
+    monte_carlo_cdf_df = monte_carlo_cdf_chart_data(monte_carlo_results_df)
+    monte_carlo_var_df = monte_carlo_var_chart_data(
+        monte_carlo_results_df,
+        confidence_level=float(st.session_state["mc_confidence_level"]),
+    )
+    monte_carlo_shock_chart_df = monte_carlo_shock_chart_data(monte_carlo_shocks_df)
+    monte_carlo_worst_df = monte_carlo_worst_scenarios_chart_data(
+        monte_carlo_results_df,
+        n_worst=10,
+    )
 
     worst_scenario = scenario_df.loc[scenario_df["pnl"].idxmin()]
     best_scenario = scenario_df.loc[scenario_df["pnl"].idxmax()]
@@ -630,6 +695,7 @@ def main() -> None:
         tab_construction,
         tab_curve_fitting,
         tab_market_risk,
+        tab_monte_carlo_risk,
         tab_report,
     ) = st.tabs(
         [
@@ -642,6 +708,7 @@ def main() -> None:
             "Curve Construction",
             "Curve Fitting",
             "Market Risk",
+            "Monte Carlo Risk",
             "Risk Report / Export",
         ]
     )
@@ -1128,6 +1195,106 @@ def main() -> None:
                     "- Parametric VaR assumes an approximately normal loss distribution and uses volatility plus a z-score.",
                     "- Stress testing applies explicit curve shocks that may be more severe or more structured than recent history.",
                     "- These simplified models are useful for education and portfolio inspection, but they do not capture liquidity effects, regime shifts, or full re-hedging behaviour.",
+                ]
+            )
+        )
+
+    with tab_monte_carlo_risk:
+        st.subheader("Simulation Controls")
+        control_col1, control_col2, control_col3, control_col4 = st.columns(4)
+        control_col1.number_input(
+            "Number of simulations",
+            min_value=100,
+            max_value=10000,
+            step=100,
+            key="mc_n_simulations",
+        )
+        control_col2.number_input(
+            "Random seed",
+            min_value=0,
+            max_value=999999,
+            step=1,
+            key="mc_random_seed",
+        )
+        control_col3.selectbox(
+            "Confidence level",
+            options=[0.95, 0.99],
+            key="mc_confidence_level",
+        )
+        control_col4.selectbox(
+            "Volatility preset",
+            options=list(VOLATILITY_PRESETS_BPS.keys()),
+            key="mc_volatility_preset",
+        )
+
+        st.subheader("Monte Carlo Risk Summary")
+        mc_col1, mc_col2, mc_col3, mc_col4, mc_col5, mc_col6 = st.columns(6)
+        mc_col1.metric("Portfolio Value", format_currency(monte_carlo_summary["base_portfolio_value"]))
+        mc_col2.metric("Monte Carlo VaR 95%", format_currency(monte_carlo_summary["monte_carlo_var_95"]))
+        mc_col3.metric("Monte Carlo VaR 99%", format_currency(monte_carlo_summary["monte_carlo_var_99"]))
+        mc_col4.metric(
+            "Expected Shortfall 95%",
+            format_currency(monte_carlo_summary["monte_carlo_expected_shortfall_95"]),
+        )
+        mc_col5.metric("Probability of Loss", format_percent(monte_carlo_summary["probability_of_loss"]))
+        mc_col6.metric("Worst Simulated Loss", format_currency(monte_carlo_summary["worst_1pct_loss"]))
+
+        st.subheader("Simulation Distribution")
+        mc_chart_col1, mc_chart_col2 = st.columns(2)
+        mc_chart_col1.plotly_chart(
+            build_plotly_histogram(
+                monte_carlo_distribution_df,
+                "pnl",
+                "Monte Carlo P&L Distribution",
+            ),
+            use_container_width=True,
+            key="monte_carlo_distribution_chart",
+        )
+        mc_chart_col2.plotly_chart(
+            build_plotly_line(
+                monte_carlo_cdf_df,
+                "observation",
+                "cumulative_probability",
+                "Monte Carlo Cumulative Distribution",
+                y_format=".0%",
+            ),
+            use_container_width=True,
+            key="monte_carlo_cdf_chart",
+        )
+        st.plotly_chart(
+            build_var_threshold_chart(
+                monte_carlo_var_df,
+                "Monte Carlo P&L with VaR / Expected Shortfall Thresholds",
+            ),
+            use_container_width=True,
+            key="monte_carlo_var_threshold_chart",
+        )
+
+        st.subheader("Worst Simulated Scenarios")
+        st.dataframe(monte_carlo_worst_df, use_container_width=True)
+
+        st.subheader("Shock Distribution")
+        st.dataframe(monte_carlo_shocks_df.head(20), use_container_width=True)
+        st.plotly_chart(
+            build_plotly_box(
+                monte_carlo_shock_chart_df,
+                "tenor",
+                "shock_bps",
+                "Simulated Shock Distribution by Tenor",
+            ),
+            use_container_width=True,
+            key="monte_carlo_shock_distribution_chart",
+        )
+
+        st.subheader("Interpretation Notes")
+        st.markdown(
+            "\n".join(
+                [
+                    "- Monte Carlo VaR estimates loss from a simulated distribution rather than a purely historical sample.",
+                    "- Correlated tenor shocks matter because fixed income curves rarely move one tenor at a time in isolation.",
+                    "- Compared with historical VaR, Monte Carlo VaR lets you impose volatility and correlation assumptions explicitly.",
+                    "- This implementation uses a simplified multivariate normal shock model with tenor-level volatilities and correlations.",
+                    "- The model does not capture regime shifts, jump risk, liquidity stress, or non-Gaussian tails beyond the chosen assumptions.",
                 ]
             )
         )

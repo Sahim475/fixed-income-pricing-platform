@@ -115,6 +115,14 @@ The assessment of how a bond portfolio responds to changes in rates, including s
 - CSV caching and offline sample fallback
 - Dedicated dashboard tab for market data inspection and integration
 
+### Monte Carlo VaR & Simulation-Based Risk
+
+- Correlated tenor-by-tenor yield shock simulation
+- Monte Carlo portfolio repricing under thousands of scenarios
+- Monte Carlo VaR and Expected Shortfall analytics
+- Simulation distribution charts, worst-case scenario tables, and shock visualisation
+- Streamlit dashboard controls for simulation count, random seed, confidence level, and volatility regime
+
 ### Scenario Analysis
 
 - Interest-rate shock scenarios in basis points
@@ -158,8 +166,11 @@ fixed-income-pricing-platform/
 |-- data/
 |   |-- sample_portfolio.csv
 |   `-- sample_yield_curve.csv
+|-- docs/
+|   `-- phase18_monte_carlo_risk_design.md
 |-- examples/
-|   `-- phase9_demo.py
+|   |-- phase17_market_data_demo.py
+|   `-- phase18_monte_carlo_demo.py
 |-- src/
 |   `-- fixed_income/
 |       |-- bond.py
@@ -168,6 +179,8 @@ fixed-income-pricing-platform/
 |       |-- curve_scenarios.py
 |       |-- date_utils.py
 |       |-- io.py
+|       |-- market_data.py
+|       |-- monte_carlo.py
 |       |-- portfolio.py
 |       |-- pricing.py
 |       |-- reporting.py
@@ -246,6 +259,17 @@ Historical market data can also feed directly into the Phase 15 VaR engine by tr
 
 The dashboard is designed to work offline. If live FRED access is unavailable, it falls back first to a cached CSV if available and then to a bundled sample market data file. 
 
+## Monte Carlo VaR & Simulation-Based Risk
+
+Monte Carlo VaR estimates downside risk by simulating many hypothetical market outcomes rather than replaying only the shocks that happened historically. In this project, the simulated risk factor is the yield curve. Each tenor is assigned a daily volatility assumption, a correlation matrix links tenor moves together, and the platform generates correlated random shocks across the curve.
+
+Those simulated shocks are applied to the base `YieldCurve`, the portfolio is repriced under each shocked curve, and the resulting P&L distribution is used to calculate Monte Carlo VaR and Expected Shortfall. This makes the approach flexible: you can explore low-volatility, normal, high-volatility, and crisis-style environments without needing a long historical dataset for each regime.
+
+Correlated yield shocks matter because fixed-income curves do not move as independent points. The front end, belly, and long end usually co-move, but not perfectly. The default model in this phase uses an exponentially decaying tenor correlation structure so nearby maturities move together more strongly than distant maturities.
+
+Compared with historical VaR, Monte Carlo VaR is assumption-driven rather than sample-driven. Historical VaR reflects realised market history; Monte Carlo VaR reflects the distribution implied by chosen volatilities and correlations. That makes Monte Carlo useful for forward-looking scenario design, but it also means results depend heavily on modelling assumptions.
+
+The simplified model still has clear limitations. It assumes multivariate normal shocks, static correlations, and a single shocked curve as the main market driver. It does not model spread decompositions, liquidity breaks, optionality, regime shifts, or dynamic hedging behaviour.
 
 
 ## Example Analytics
@@ -267,5 +291,4 @@ Planned extensions include:
 - Credit spread modelling
 - Historical scenario analysis
 - Market data integration
-
 
