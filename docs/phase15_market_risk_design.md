@@ -2,7 +2,7 @@
 
 ## 1. Objective
 
-Phase 15 extends the platform with a market-risk layer that estimates downside risk from historical curve moves, parametric volatility assumptions, and deterministic stress scenarios. The design keeps the implementation educational and transparent while reusing the existing curve-pricing engine for repricing under shocks.
+Phase 15 extends the platform with a market-risk layer that estimates downside risk from historical curve moves, parametric volatility assumptions, and deterministic stress scenarios. 
 
 The phase adds:
 
@@ -97,7 +97,6 @@ Implemented scenarios:
 - Inflation Shock
 - Liquidity Shock
 
-Some scenarios reuse the existing curve-shock utilities from earlier phases. Others are defined directly using simplified tenor-dependent shifts.
 
 ## 7. Risk Summary Metrics
 
@@ -135,7 +134,6 @@ This combines distribution-based and model-based views of downside risk.
 - no portfolio hedging or rebalancing logic during stress
 - historical simulation quality depends on the representativeness of the historical dataset
 
-These are deliberate tradeoffs for readability and learning value.
 
 ## 10. Dashboard Integration
 
@@ -151,16 +149,6 @@ The Streamlit dashboard adds a `Market Risk` tab with:
 
 If no historical curve file is uploaded, the app generates a built-in synthetic dataset programmatically so the market-risk views remain usable.
 
-## 11. Interview Discussion Guide
 
-Useful discussion points for interviews:
 
-- explain the difference between historical VaR and parametric VaR
-- explain why Expected Shortfall is more informative in the tail
-- describe how curve shocks are transformed into portfolio P&L
-- explain why stress testing complements VaR instead of replacing it
-- discuss why linear interpolation of tenor shocks is acceptable for an educational implementation but not always enough for production
 
-## 12. Key Takeaway
-
-Phase 15 moves the project from static sensitivity measures into distribution-based market-risk analysis. The platform can now combine pricing, curve shocks, parametric fitting, and stress scenarios inside one coherent fixed-income analytics workflow.

@@ -12,8 +12,6 @@ The implementation adds:
 - Fit-quality diagnostics
 - Dashboard visualisation and comparison against the bootstrapped curve
 
-The design is intentionally educational. It aims to be numerically stable and easy to read rather than production-optimised.
-
 ## 2. Mathematical Models
 
 ### 2.1 Nelson-Siegel
@@ -86,8 +84,6 @@ Because the current project environment may not always have SciPy installed, the
 - Nelson-Siegel: grid search over `tau`, with linear least-squares estimation of beta coefficients for each candidate
 - Svensson: grid search over `(tau1, tau2)`, with linear least-squares estimation of beta coefficients for each candidate pair
 
-This fallback is slower and less flexible than full non-linear optimisation, but it keeps the feature operational and testable in a lightweight environment.
-
 ### 4.3 Initial Guesses
 
 The optimisation starts from sensible rate-curve heuristics:
@@ -136,12 +132,10 @@ Phase 13 then adds:
 
 `zero rates -> parametric calibration -> fitted curve diagnostics`
 
-This means the project now supports both:
+Now my platform supports both:
 
 - market-consistent node-based curves
 - smooth factor-based parametric curves
-
-That distinction is useful in fixed income workflows because pricing often depends on the bootstrapped market curve, while risk reporting and macro interpretation often benefit from a smooth factor model.
 
 ## 8. Dashboard Design
 
@@ -159,9 +153,6 @@ This keeps the Phase 13 functionality visually separate from Phase 12 bootstrapp
 
 ## 9. Limitations
 
-This implementation deliberately avoids production complexity.
-
-Known limitations:
 
 - no quote weighting or robust loss functions
 - no regularisation of parameters
@@ -171,24 +162,11 @@ Known limitations:
 - no day-count or business-day conventions in the input curve construction
 - fallback calibration depends on a discrete parameter grid when SciPy is unavailable
 
-These tradeoffs are acceptable for a portfolio-quality educational analytics platform.
 
-## 10. Connection to Fixed Income Risk
-
-Parametric curve models are useful because they compress the shape of the term structure into a small number of interpretable factors.
-
-In practice:
 
 - `beta0` behaves like a level factor
 - `beta1` behaves like a slope factor
 - `beta2` and `beta3` behave like curvature factors
 
-That makes the models relevant for:
 
-- scenario design
-- reporting to non-technical stakeholders
-- stress testing
-- factor-based risk decomposition
-- comparing noisy market inputs to smooth curve representations
 
-Phase 13 therefore extends the platform from curve construction into curve representation and model-based interpretation.

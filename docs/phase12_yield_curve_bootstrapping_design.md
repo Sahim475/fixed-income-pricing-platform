@@ -2,9 +2,9 @@
 
 ## 1. Executive Summary
 
-Phase 12 adds a yield curve construction layer to the fixed income pricing platform so that curves can be derived from market instruments instead of being manually entered as tenor-rate pairs. In practice, fixed income pricing depends on discount factors because every cash flow must be converted into present value using a maturity-specific discount term. Market participants do not directly observe a full set of discount factors across all maturities, so they infer them from quoted instruments such as deposits and swaps.
+Phase 12 adds a yield curve construction layer to the fixed income pricing platform so that curves can be derived from market instruments instead of being manually entered as tenor-rate pairs.
 
-This implementation introduces:
+I've now introduced:
 
 - Short-end bootstrapping from deposit instruments
 - Extension of the curve using fixed-for-floating swap quotes
@@ -12,9 +12,9 @@ This implementation introduces:
 - Forward rate extraction from the resulting curve
 - Curve construction analytics and dashboard visualisation
 
-The design is intentionally educational. It captures the core mechanics of bootstrapping while avoiding production-grade infrastructure such as holiday calendars, day-count libraries, and multi-curve modeling.
 
-## 2. Financial Theory
+
+
 
 ### 2.1 Discount Factors
 
@@ -112,7 +112,7 @@ The implementation stores a `YieldCurve` object with tenor points and interpolat
 
 ### 3.1 Market Inputs
 
-The short end of the curve is bootstrapped from `DepositInstrument` in [src/fixed_income/yield_curve.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/src/fixed_income/yield_curve.py).
+The short end of the curve is bootstrapped from `DepositInstrument` in [src/fixed_income/yield_curve.py]
 
 Each deposit quote has:
 
@@ -188,7 +188,7 @@ These assumptions are explicit in `bootstrap_from_deposits()`.
 
 Deposit instruments are useful at the short end, but they do not provide enough liquid maturities for the intermediate and long end. Fixed-for-floating swaps are commonly used because par swap rates are widely quoted across longer maturities such as 2Y, 3Y, 5Y, 7Y, and 10Y.
 
-The implementation models swap quotes using `InterestRateSwapInstrument` in [src/fixed_income/yield_curve.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/src/fixed_income/yield_curve.py).
+The implementation models swap quotes using `InterestRateSwapInstrument` in [src/fixed_income/yield_curve.py]
 
 ### 4.2 Par Swap Valuation
 
@@ -340,7 +340,7 @@ which produces a positive forward rate for a normal upward curve.
 
 ### 6.4 Dashboard Extraction
 
-The helper `forward_rate_curve_data()` in [src/fixed_income/visuals.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/src/fixed_income/visuals.py) computes adjacent-tenor forward rates for dashboard plotting. It returns:
+The helper `forward_rate_curve_data()` in [src/fixed_income/visuals.py]
 
 - `start_tenor`
 - `end_tenor`
@@ -349,17 +349,6 @@ The helper `forward_rate_curve_data()` in [src/fixed_income/visuals.py](C:/Users
 The Streamlit app then builds a chart label from those two tenor columns.
 
 ## 7. Software Architecture
-
-### 7.1 Core Modules
-
-Phase 12 is implemented across:
-
-- [src/fixed_income/yield_curve.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/src/fixed_income/yield_curve.py)
-- [src/fixed_income/visuals.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/src/fixed_income/visuals.py)
-- [src/fixed_income/visualisation.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/src/fixed_income/visualisation.py)
-- [app/streamlit_app.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/app/streamlit_app.py)
-- [examples/phase12_bootstrap_demo.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/examples/phase12_bootstrap_demo.py)
-- [tests/test_bootstrap.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/tests/test_bootstrap.py)
 
 ### 7.2 Main Classes
 
@@ -489,156 +478,4 @@ Representative failure cases:
 - unbracketed swap bootstrap solutions
 - asking for a forward rate where `end_tenor <= start_tenor`
 
-These errors are surfaced as `ValueError`, which is consistent with the rest of the project.
-
-### 8.5 Dashboard Integration
-
-The Phase 12 dashboard integration lives in [app/streamlit_app.py](C:/Users/sahim/Desktop/fixed-income-pricing-platform/app/streamlit_app.py).
-
-The `Curve Construction` tab:
-
-1. creates sample deposit and swap instruments
-2. calls `bootstrap_from_deposits_and_swaps()`
-3. renders:
-   - curve input tables
-   - bootstrapped curve summary
-   - market-rate chart
-   - discount-factor chart
-   - zero-rate chart
-   - forward-rate chart
-
-Plot preparation is delegated to `fixed_income.visualisation`, which re-exports the helpers from `visuals.py`.
-
-## 9. Limitations
-
-This implementation intentionally excludes several production concerns.
-
-### 9.1 Day-Count Conventions
-
-The bootstrap engine does not use instrument-specific day-count conventions for deposits or swaps. Tenors are converted directly into simple year fractions.
-
-### 9.2 Business-Day Adjustments and Holiday Calendars
-
-No schedule engine is used for:
-
-- holiday calendars
-- business-day rolling
-- spot lag
-- accrual schedule generation for swap legs
-
-### 9.3 Stub Periods
-
-Only whole-year swap maturities are supported in the simplified swap bootstrap. Irregular first or last periods are excluded.
-
-### 9.4 Floating Reset Schedules
-
-The floating leg is not modeled with explicit reset dates or index fixings. Instead, the implementation uses a simplified par swap valuation identity.
-
-### 9.5 Production-Grade Considerations
-
-The code is not intended to be a trading-desk curve engine. It excludes:
-
-- calibration diagnostics
-- quote cleaning
-- interpolation policy selection
-- curve versioning
-- audit trails
-- market data adapters
-- intraday rebuild workflows
-- stress and fallback logic for bad quotes
-
-These omissions are deliberate because the project targets conceptual clarity and code readability.
-
-## 10. Future Enhancements
-
-Natural extensions include:
-
-- Nelson-Siegel fitting
-- Svensson fitting
-- spline-based curve smoothing
-- OIS discounting
-- multi-curve forecasting and discounting
-- FRA/futures support
-- bond-based bootstrapping
-- market data integration
-- holiday and day-count infrastructure
-- production calibration reports
-
-Within this repository, a sensible next step would be to keep the current bootstrap engine for educational inspection while adding an optional production-style abstraction layer for:
-
-- quote normalization
-- conventions
-- interpolation policy
-- calibration diagnostics
-
-## 11. Interview Discussion Guide
-
-### 11.1 Common Interview Questions
-
-`What is bootstrapping?`
-
-Strong answer:
-
-Bootstrapping is the sequential process of deriving discount factors or zero rates from market quotes. You start from instruments whose discount factors can be solved directly, such as deposits, and then extend the curve maturity by maturity using longer-dated instruments like swaps.
-
-`Why can't we directly observe discount factors?`
-
-Strong answer:
-
-Markets typically quote rates on instruments, not a full term structure of discount factors. Deposits, swaps, bonds, and futures each reveal only partial information. Bootstrapping converts those observed quotes into a consistent set of discount factors that can be used for valuation.
-
-`Why are swaps useful for curve construction?`
-
-Strong answer:
-
-Swaps are liquid at medium and long maturities where deposits are unavailable or illiquid. A par swap rate embeds information about the discount structure over a sequence of coupon dates, so it is a practical instrument for extending the curve beyond the money-market segment.
-
-`What assumptions does your implementation make?`
-
-Strong answer:
-
-The implementation uses simple-interest deposits, annual-compounded zero rates by default, annual swap fixed-leg payments, linear interpolation in zero-rate space for missing annual nodes, and bisection to solve the terminal swap zero rate. It intentionally excludes day-count, business-day, and multi-curve production details.
-
-`How would a production system differ?`
-
-Strong answer:
-
-A production system would include market conventions, holiday calendars, explicit cash-flow schedules, interpolation policy control, data validation, multi-curve support, OIS discounting, diagnostics, audit trails, and integration with live market data and risk infrastructure.
-
-### 11.2 Good Project Framing in Interviews
-
-You can describe this phase as:
-
-1. extending a pricing platform from static curves to market-instrument curve construction
-2. implementing the full chain from deposits and swaps to discount factors, zero rates, and forwards
-3. exposing the results through tests, examples, and a Streamlit dashboard
-
-That framing highlights both quantitative understanding and end-to-end engineering delivery.
-
-## 12. Key Takeaways
-
-### Financial Concepts Demonstrated
-
-- discount factors
-- zero rates
-- forward rates
-- par swap bootstrapping
-- term structure construction
-
-### Quantitative Techniques Demonstrated
-
-- sequential curve calibration
-- conversion between compounding conventions
-- implied forward-rate extraction
-- bracketed numerical root solving via bisection
-- interpolation of curve state between quoted nodes
-
-### Software Engineering Concepts Demonstrated
-
-- domain modeling with typed dataclasses
-- modular financial analytics design
-- separation between construction, analytics, visualisation, and dashboard layers
-- test-backed development of financial utilities
-- educational feature delivery without breaking prior functionality
-
-Phase 12 demonstrates how a financial engineering concept can be translated into a coherent software subsystem: market quotes become discount factors, discount factors become a usable zero curve, and that zero curve becomes the foundation for analytics, examples, and UI-driven inspection.
+These errors are surfaced as `ValueError`
