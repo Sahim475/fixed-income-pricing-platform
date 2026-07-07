@@ -15,6 +15,13 @@ from .market_data import (
     latest_curve_from_market_data,
     tenor_time_series_from_market_data,
 )
+from .monte_carlo import (
+    monte_carlo_cumulative_distribution_data,
+    monte_carlo_pnl_distribution_data,
+    monte_carlo_shock_distribution_data,
+    monte_carlo_var_threshold_data,
+    monte_carlo_worst_scenarios_data,
+)
 from .curve_scenarios import run_non_parallel_portfolio_curve_scenarios
 from .portfolio import (
     PortfolioHolding,
@@ -335,3 +342,37 @@ def market_curve_change_data(market_data_df: pd.DataFrame) -> pd.DataFrame:
 def market_tenor_history_data(market_data_df: pd.DataFrame, tenor: float) -> pd.DataFrame:
     """Return the full history for a selected market-data tenor."""
     return tenor_time_series_from_market_data(market_data_df, tenor)
+
+
+def monte_carlo_distribution_chart_data(simulation_results: pd.DataFrame) -> pd.DataFrame:
+    """Return Monte Carlo P&L distribution data for charts."""
+    return monte_carlo_pnl_distribution_data(simulation_results)
+
+
+def monte_carlo_cdf_chart_data(simulation_results: pd.DataFrame) -> pd.DataFrame:
+    """Return Monte Carlo cumulative distribution data for charts."""
+    return monte_carlo_cumulative_distribution_data(simulation_results)
+
+
+def monte_carlo_var_chart_data(
+    simulation_results: pd.DataFrame,
+    confidence_level: float = 0.95,
+) -> pd.DataFrame:
+    """Return Monte Carlo VaR threshold data for chart overlays."""
+    return monte_carlo_var_threshold_data(
+        simulation_results,
+        confidence_level=confidence_level,
+    )
+
+
+def monte_carlo_shock_chart_data(simulated_shocks: pd.DataFrame) -> pd.DataFrame:
+    """Return Monte Carlo shock distribution data by tenor."""
+    return monte_carlo_shock_distribution_data(simulated_shocks)
+
+
+def monte_carlo_worst_scenarios_chart_data(
+    simulation_results: pd.DataFrame,
+    n_worst: int = 10,
+) -> pd.DataFrame:
+    """Return the worst Monte Carlo scenarios for dashboard display."""
+    return monte_carlo_worst_scenarios_data(simulation_results, n_worst=n_worst)
