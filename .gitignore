@@ -40,3 +40,8 @@ data/cache/
 
 # Logs
 *.log
+
+# Generated reports
+output/
+
+data/market_data/

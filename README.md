@@ -4,8 +4,6 @@ A Python-based fixed income analytics platform for pricing bonds, analysing port
 
 ## Overview
 
-This project is designed for quantitative developers, financial software engineers, risk technology teams, and fixed income analytics professionals who want a lightweight but technically grounded implementation of core fixed income concepts.
-
 It enables users to:
 
 - Price fixed coupon bonds
@@ -211,23 +209,22 @@ python -m streamlit run app/streamlit_app.py
 
 Key rate duration and key rate DV01 break curve risk into individual tenor buckets rather than treating the entire curve as a single parallel move. That gives a more realistic view of how a bond or portfolio reacts when the front end, belly, or long end of the curve moves differently.
 
-The platform now supports non-parallel shocks such as steepeners, flatteners, and twists. These scenarios matter because fixed income portfolios are often exposed to curve shape changes, not just level shifts, and professional risk management usually needs tenor-level decomposition alongside aggregate duration and DV01.
+The platform now supports non-parallel shocks such as steepeners, flatteners, and twists. 
 
 ## Yield Curve Construction & Bootstrapping
 
 Discount factors measure the present value of one unit of cash received at a future date. Zero rates are the spot discount rates implied by those discount factors, and forward rates represent the market-implied rate between two future tenors.
 
-Bootstrapping is used in fixed income markets because most instruments quote par or market rates rather than a full set of discount factors. By combining short-dated deposits with longer-dated swaps, the curve can be constructed sequentially so that every maturity point is internally consistent with observed market instruments.
+By combining short-dated deposits with longer-dated swaps, the curve can be constructed sequentially so that every maturity point is internally consistent with observed market instruments.
 
 ## Nelson-Siegel and Svensson Curve Fitting
 
-Parametric curve fitting is used when a desk or risk team wants a smooth, compact representation of the term structure rather than a piecewise set of bootstrapped market nodes. A fitted curve is useful for reporting, scenario design, factor interpretation, and stress testing because a small set of parameters describes the overall level, slope, and curvature of the curve.
+A fitted curve is useful for reporting, scenario design, factor interpretation, and stress testing because a small set of parameters describes the overall level, slope, and curvature of the curve.
 
-This project now supports both bootstrapped and fitted curves. The bootstrapped curve is the market-consistent curve implied directly by deposit and swap inputs. The fitted curves are smooth approximations calibrated to the bootstrapped zero rates using least squares. That means the fitted models are designed to explain the observed shape, not replace the underlying market quotes.
+The project now supports both bootstrapped and fitted curves. The bootstrapped curve is the market-consistent curve implied directly by deposit and swap inputs. The fitted curves are smooth approximations calibrated to the bootstrapped zero rates using least squares. That means the fitted models are designed to explain the observed shape, not replace the underlying market quotes.
 
 In Nelson-Siegel, `beta0` is the long-run level, `beta1` is the slope term, `beta2` is the main curvature term, and `tau` controls the decay of the loadings across maturity. Svensson extends this by adding `beta3` and a second decay parameter so the model can represent a second hump or extra curvature in the term structure. That added flexibility usually improves fit quality, especially when the observed curve has a more complex belly or long-end shape.
 
-Parametric models still have limits. They smooth noise and can improve interpretability, but they may not match every market node exactly, can become unstable with poor initialisation or sparse inputs, and are not a substitute for production-grade convention handling or multi-curve infrastructure.
 
 ## Historical VaR & Stress Testing
 
@@ -247,9 +244,9 @@ FRED Treasury rates are fetched in percentage terms and converted into decimals 
 
 Historical market data can also feed directly into the Phase 15 VaR engine by transforming the long-form market data into the `date, tenor, rate` shape expected by historical curve shock simulation. That keeps the market data integration additive rather than rewriting existing risk logic.
 
-The dashboard is designed to work offline. If live FRED access is unavailable, it falls back first to a cached CSV if available and then to a bundled sample market data file. This makes the Market Data tab usable in restricted or no-network environments.
+The dashboard is designed to work offline. If live FRED access is unavailable, it falls back first to a cached CSV if available and then to a bundled sample market data file. 
 
-The current implementation is intentionally limited to a single Treasury source and simple tenor/rate snapshots. It does not attempt to be a full production market data platform with vendor redundancy, entitlement controls, quote cleaning, or intraday event handling.
+
 
 ## Example Analytics
 
